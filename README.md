@@ -7,7 +7,7 @@ This project demonstrates a scalable, decoupled system with a dedicated backend 
 ---
 ## 🎥 Demo
 
-[![UW-Madison CS Advisor Chatbot Demo](https://imgur.com/a/pDqjTwf)](https://mediaspace.wisc.edu/media/Recording+2/1_d7l5msp4)
+[![UW-Madison CS Advisor Chatbot Demo](https://i.imgur.com/RpzW1iD.png)](https://mediaspace.wisc.edu/media/Recording+2/1_d7l5msp4)
 
 *Click the thumbnail above to watch a video demo of the application.*
 
