@@ -123,7 +123,7 @@ def load_rag_pipeline():
     # Initialize the generative model from Together AI.
     llm = Together(
         model="mistralai/Mistral-7B-Instruct-v0.2",
-        temperature=0.1,  # Lower temperature for more factual, less creative answers.
+        temperature=0.2,
         max_tokens=1024
     )
 
@@ -135,7 +135,7 @@ def load_rag_pipeline():
     
     # b. The cross-encoder is a more powerful model used to re-rank the initial results.
     cross_encoder_model = HuggingFaceCrossEncoder(model_name="cross-encoder/ms-marco-MiniLM-L-6-v2")
-    compressor = CrossEncoderReranker(model=cross_encoder_model, top_n=4)
+    compressor = CrossEncoderReranker(model=cross_encoder_model, top_n=5)
     
     # c. The final retriever compresses the results, passing only the top N documents.
     compression_retriever = ContextualCompressionRetriever(
@@ -145,18 +145,20 @@ def load_rag_pipeline():
     # 6. Prompt Engineering
     # Define the instructions for the LLM to guide its response generation.
     template = """
-You are a formal, expert academic advisor for the University of Wisconsin-Madison's Computer Sciences department.
-Your tone should be professional, helpful, and precise.
-Use the following highly relevant context to provide a direct and accurate answer to the user's question.
-Do not repeat the question or use a question-and-answer format.
-If you are listing multiple items, such as courses, use a Markdown bulleted list.
-If the answer is not in the provided context, state that you cannot find the information based on the documents available.
+    You are a friendly and knowledgeable academic advisor for the University of Wisconsin-Madison's Computer Sciences department. Your goal is to provide clear, helpful, and encouraging guidance to students.
 
-Context:
-{context}
+    Carefully read the user's question and the provided context.
+    - First, acknowledge the user's specific situation if they provide one (e.g., "It's great that you already have credit for...").
+    - Then, use the context to directly answer their question in a human-like, conversational manner.
+    - **IMPORTANT**: When the user asks for a list of items (like courses), ensure your answer is comprehensive and includes all relevant items found in the context.
+    - Use a Markdown bulleted list for clarity when listing items.
+    - If the answer is not in the provided context, state that you cannot find the specific information based on the documents available.
 
-Question: {question}
-Answer:"""
+    Context:
+    {context}
+
+    Question: {question}
+    Answer:"""
     prompt = PromptTemplate(template=template, input_variables=["context", "question"])
 
     # 7. Chain Assembly
