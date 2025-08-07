@@ -6,7 +6,12 @@ This project demonstrates a scalable, decoupled system with a dedicated backend 
 
 ---
 ## 🎥 Demo
-<iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/1660902/embedPlaykitJs/uiconf_id/55063162?iframeembed=true&amp;entry_id=1_d7l5msp4&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_qhdu8mr5%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 576px;height: 324px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *"  title="Recording 2"></iframe>
+
+[![UW-Madison CS Advisor Chatbot Demo](https://imgur.com/a/pDqjTwf)](https://mediaspace.wisc.edu/media/Recording+2/1_d7l5msp4)
+
+*Click the thumbnail above to watch a video demo of the application.*
+
+---
 
 ## 🚀 Features
 
