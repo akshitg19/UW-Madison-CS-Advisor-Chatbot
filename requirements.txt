@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+python-dotenv
+requests
+streamlit
+langchain
+langchain-community
+chromadb-py
+sentence-transformers
+unstructured
+jq
+rank_bm25
