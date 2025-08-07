@@ -5,6 +5,8 @@ This is an advanced, AI-powered chatbot designed to answer questions about the B
 This project demonstrates a scalable, decoupled system with a dedicated backend for AI processing and a lightweight, responsive frontend for user interaction.
 
 ---
+## 🎥 Demo
+<iframe id="kaltura_player" src='https://cdnapisec.kaltura.com/p/1660902/embedPlaykitJs/uiconf_id/55063162?iframeembed=true&amp;entry_id=1_d7l5msp4&amp;config%5Bprovider%5D=%7B%22widgetId%22%3A%221_qhdu8mr5%22%7D&amp;config%5Bplayback%5D=%7B%22startTime%22%3A0%7D'  style="width: 576px;height: 324px;border: 0;" allowfullscreen webkitallowfullscreen mozAllowFullScreen allow="autoplay *; fullscreen *; encrypted-media *"  title="Recording 2"></iframe>
 
 ## 🚀 Features
 
