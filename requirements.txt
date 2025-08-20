@@ -1,12 +1,23 @@
+# Backend Framework
 fastapi
 uvicorn
+
+# Environment & API Calls
 python-dotenv
 requests
+
+# Frontend Framework
 streamlit
+
+# LangChain Core & Community
 langchain
 langchain-community
-chromadb-py
+langchain-together
+
+# Vector Store & Embeddings
+chromadb
 sentence-transformers
+
+# Document Loading
 unstructured
-jq
-rank_bm25
+pypdf
