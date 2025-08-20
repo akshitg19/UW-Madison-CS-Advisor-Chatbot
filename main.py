@@ -33,6 +33,9 @@ from langchain_community.llms import Together
 from langchain.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # --- Local Imports ---
 # Importing my knowledge base and the new database utility functions.
@@ -221,3 +224,4 @@ def get_answer(query: Query):
 def read_root():
     """A simple health check endpoint so I can see if the API is running."""
     return {"status": "UW-Madison CS Advisor API is running."}
+
