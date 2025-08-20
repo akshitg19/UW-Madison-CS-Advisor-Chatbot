@@ -55,7 +55,7 @@ Follow these steps to run the project on your local machine.
 ### 1. Clone the Repository
 
 ```bash
-git clone [https://github.com/akshitg19/UW-Madison-CS-Advisor-Chatbot.git](https://github.com/akshitg19/UW-Madison-CS-Advisor-Chatbot.git)
+git clone https://github.com/akshitg19/UW-Madison-CS-Advisor-Chatbot.git
 cd UW-Madison-CS-Advisor-Chatbot
 ```
 
