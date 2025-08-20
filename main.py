@@ -20,26 +20,18 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 # --- LangChain Imports ---
-# Document Loading and Processing
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-
-# Vector Stores and Embeddings
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.cross_encoders import HuggingFaceCrossEncoder
-
-# Retrievers
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import CrossEncoderReranker
-
-# LLMs and Chains
 from langchain_community.llms import Together
 from langchain.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
 
 # --- Local Imports ---
-# Import the structured knowledge base from the local file.
 from knowledge_base import (
     cs_bs_description_data, cs_bs_how_to_get_in_data, cs_bs_requirements_data,
     cs_bs_advanced_requirements_data, cs_bs_residence_honors_data,
@@ -52,23 +44,20 @@ from knowledge_base import (
 # --- Data Models ---
 
 class Query(BaseModel):
-    """
-    Pydantic model for validating the incoming request body.
-    Ensures that the 'question' field is a string.
-    """
+    """Simple Pydantic model to make sure the question is a string."""
     question: str
 
 # --- FastAPI Application Setup ---
 
-# Initialize the FastAPI application with metadata for documentation.
+# The main FastAPI app instance. The metadata helps with auto-generated docs.
 app = FastAPI(
     title="UW-Madison CS Advisor API",
     description="An API for querying information about the B.S. in Computer Sciences.",
     version="1.0.0",
 )
 
-# Global variable to hold the initialized RAG chain.
-# This prevents reloading the model on every request.
+# I'm using a global variable for the chain so it's loaded only once on startup.
+# This prevents reloading the heavy models on every single API request.
 qa_chain = None
 
 # --- RAG Pipeline Initialization ---
@@ -76,17 +65,16 @@ qa_chain = None
 @app.on_event("startup")
 def load_rag_pipeline():
     """
-    This function is executed once when the FastAPI server starts.
-    It loads all necessary models and sets up the full RAG pipeline.
+    This function gets triggered once when the server starts.
+    It builds the entire RAG pipeline from scratch and stores it in our global variable.
     """
     global qa_chain
     
-    # Ensure the necessary API key is available in the environment.
+    # Quick check to make sure the API key is actually set.
     if not os.getenv("TOGETHER_API_KEY"):
         raise ValueError("TOGETHER_API_KEY not found in environment.")
 
-    # 1. Document Loading and Assembly
-    # Consolidate all parts of the knowledge base into a list of LangChain Documents.
+    # Step 1: Loading my data into LangChain's Document format.
     documents = []
     cs_data_parts = [
         cs_bs_description_data, cs_bs_how_to_get_in_data, cs_bs_requirements_data, 
@@ -94,62 +82,61 @@ def load_rag_pipeline():
         cs_bs_learning_outcomes_data, cs_bs_four_year_plan_data, cs_bs_scholarships_data,
         cs_bs_advising_careers_data
     ]
-    # Combine all CS major data into one master document.
+    # I decided to combine all the general CS major info into one big document.
+    # This helps the retriever find broad context for complex questions.
     master_cs_data = {}
     for part in cs_data_parts:
         master_cs_data.update(part)
     documents.append(Document(page_content=json.dumps(master_cs_data, indent=2), metadata={"source": "CS_BS_Major_Master_Document"}))
     
-    # Create a separate document for each course.
+    # For courses, I'm creating a separate document for each one. This way,
+    # questions about a specific course can be answered more accurately.
     for course in all_course_data:
         documents.append(Document(page_content=json.dumps(course, indent=2), metadata={"source": f"{course.get('course_code', 'Unknown_Course')}.json"}))
     
-    # Add documents for general university and college requirements.
+    # Adding the last couple of general requirement documents.
     documents.append(Document(page_content=json.dumps(ls_bs_degree_requirements_data, indent=2), metadata={"source": "LS_BS_Degree_Requirements"}))
     documents.append(Document(page_content=json.dumps(university_general_education_requirements_data, indent=2), metadata={"source": "University_General_Requirements"}))
 
-    # 2. Text Splitting
-    # Break down the documents into smaller, manageable chunks for the retriever.
+    # Step 2: Splitting the documents into smaller chunks for the vector store.
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=150)
     texts = text_splitter.split_documents(documents)
 
-    # 3. Vectorization and Storage
-    # Create embeddings for the text chunks and store them in a Chroma vector database.
+    # Step 3: Turning the text chunks into vectors and storing them in ChromaDB.
     embedding_model_name = "sentence-transformers/all-MiniLM-L6-v2"
     embeddings = HuggingFaceEmbeddings(model_name=embedding_model_name)
     vectorstore = Chroma.from_documents(texts, embeddings)
     
-    # 4. Language Model (LLM)
-    # Initialize the generative model from Together AI.
+    # Step 4: Setting up the LLM I'll be using for the "generation" part.
     llm = Together(
         model="mistralai/Mistral-7B-Instruct-v0.2",
         temperature=0.2,
         max_tokens=1024
     )
 
-    # 5. Advanced Retriever Setup (Contextual Compression with Re-ranking)
-    # This setup ensures the most relevant information is passed to the LLM.
+    # Step 5: Building a better retriever. A simple vector search isn't always enough.
+    # The first pass gets a broad set of 12 potentially relevant documents.
+    base_retriever = vectorstore.as_retriever(search_kwargs={"k": 12})
     
-    # a. The base retriever fetches a broad set of potentially relevant documents.
-    base_retriever = vectorstore.as_retriever(search_kwargs={"k": 15})
-    
-    # b. The cross-encoder is a more powerful model used to re-rank the initial results.
+    # This cross-encoder then re-ranks those 12 documents to find the best 4.
+    # It's a slower but much more accurate way to find the right context.
     cross_encoder_model = HuggingFaceCrossEncoder(model_name="cross-encoder/ms-marco-MiniLM-L-6-v2")
-    compressor = CrossEncoderReranker(model=cross_encoder_model, top_n=5)
+    compressor = CrossEncoderReranker(model=cross_encoder_model, top_n=4)
     
-    # c. The final retriever compresses the results, passing only the top N documents.
+    # This wraps it all together into a single retriever.
     compression_retriever = ContextualCompressionRetriever(
         base_compressor=compressor, base_retriever=base_retriever
     )
 
-    # 6. Prompt Engineering
-    # Define the instructions for the LLM to guide its response generation.
+    # Step 6: Crafting the prompt. This is how I tell the LLM how to behave.
     template = """
     You are a friendly and knowledgeable academic advisor for the University of Wisconsin-Madison's Computer Sciences department. Your goal is to provide clear, helpful, and encouraging guidance to students.
 
     Carefully read the user's question and the provided context.
     - First, acknowledge the user's specific situation if they provide one (e.g., "It's great that you already have credit for...").
     - Then, use the context to directly answer their question in a human-like, conversational manner.
+    - **If the question is direct and simple (e.g., asking for credits, prerequisites), provide a direct and concise answer.**
+    - For more complex or open-ended questions, answer in a more detailed, conversational manner.
     - **IMPORTANT**: When the user asks for a list of items (like courses), ensure your answer is comprehensive and includes all relevant items found in the context.
     - Use a Markdown bulleted list for clarity when listing items.
     - If the answer is not in the provided context, state that you cannot find the specific information based on the documents available.
@@ -161,8 +148,7 @@ def load_rag_pipeline():
     Answer:"""
     prompt = PromptTemplate(template=template, input_variables=["context", "question"])
 
-    # 7. Chain Assembly
-    # Combine the retriever, prompt, and LLM into a single, runnable chain.
+    # Step 7: Assembling the final chain that connects the retriever, prompt, and LLM.
     qa_chain = RetrievalQA.from_chain_type(
         llm,
         chain_type="stuff",
@@ -175,24 +161,19 @@ def load_rag_pipeline():
 
 @app.post("/query")
 def get_answer(query: Query):
-    """
-    The main endpoint for handling user queries.
-    It takes a question, invokes the RAG chain, and returns the answer.
-    """
+    """This is the main endpoint the frontend will call."""
     if not qa_chain:
-        # This case should ideally not be hit if the startup event is successful.
+        # This is a fallback just in case the server starts but the chain fails to load.
         raise HTTPException(status_code=503, detail="RAG pipeline is not ready.")
     try:
-        # Invoke the RAG chain with the user's question.
+        # Here's where the magic happens: run the query through the RAG chain.
         result = qa_chain.invoke({"query": query.question})
         return {"answer": result['result']}
     except Exception as e:
-        # Generic error handling for any issues during the RAG chain execution.
+        # A general error handler if anything goes wrong during the chain execution.
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/")
 def read_root():
-    """
-    A simple health check endpoint to confirm that the API is running.
-    """
+    """A simple health check endpoint so I can see if the API is running."""
     return {"status": "UW-Madison CS Advisor API is running."}
