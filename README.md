@@ -15,7 +15,7 @@ This project demonstrates a scalable, decoupled system with a dedicated backend 
 
 ## 🚀 Features
 
--   **Conversational Q&A:** Ask questions in natural language.
+-   **Conversational Memory:** Remembers the context of your conversation to answer follow-up questions accurately.
 -   **High Accuracy:** Utilizes a re-ranking retriever to find the most relevant information and reduce model hallucinations.
 -   **Fast & Responsive UI:** The Streamlit frontend is decoupled from the heavy AI models, ensuring a smooth user experience.
 -   **Scalable Architecture:** The FastAPI backend can be scaled independently to handle heavy computational loads.
@@ -26,17 +26,20 @@ This project demonstrates a scalable, decoupled system with a dedicated backend 
 
 The application is split into two main components:
 
-1.  **FastAPI Backend (`main.py`):** A robust API that handles the entire RAG pipeline. It loads the knowledge base, manages the vector store, and runs the language model to generate answers. All heavy lifting is done here.
-2.  **Streamlit Frontend (`app.py`):** A lightweight web application that provides the user interface. It does not load any models. When a user asks a question, it simply makes an API call to the backend and displays the response.
+1.  **FastAPI Backend (`main.py`):** A robust API that handles the entire RAG pipeline. It manages the vector store, chat history database, and the language model to generate answers. All heavy lifting is done here.
+2.  **Streamlit Frontend (`app.py`):** A lightweight web application that provides the user interface. When a user asks a question, it makes an API call to the backend and displays the response.
+
+---
 
 ## 🛠️ Tech Stack
 
--   **Core Concept:** Retrieval-Augmented Generation (RAG)
+-   **Core Concept:** Conversational Retrieval-Augmented Generation (RAG)
 -   **Backend:**
     -   **Framework:** FastAPI
     -   **AI/ML Orchestration:** LangChain
     -   **LLM Provider:** Together AI (`Mistral-7B-Instruct-v0.2`)
     -   **Vector Database:** ChromaDB
+    -   **Chat History:** SQLite
     -   **Embeddings Model:** `sentence-transformers/all-MiniLM-L6-v2`
     -   **Re-ranking Model:** `cross-encoder/ms-marco-MiniLM-L-6-v2`
 -   **Frontend:**
@@ -52,13 +55,13 @@ Follow these steps to run the project on your local machine.
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/akshitg19/UW-Madison-CS-Advisor-Chatbot.git
+git clone [https://github.com/akshitg19/UW-Madison-CS-Advisor-Chatbot.git](https://github.com/akshitg19/UW-Madison-CS-Advisor-Chatbot.git)
 cd UW-Madison-CS-Advisor-Chatbot
 ```
 
 ### 2. Set Up a Virtual Environment
 
-It's highly recommended to use a virtual environment to manage project dependencies.
+Using a virtual environment is a best practice to keep project dependencies isolated.
 
 ```bash
 # Create a virtual environment
@@ -73,7 +76,7 @@ source venv/bin/activate
 
 ### 3. Install Dependencies
 
-Install all required packages from the `requirements.txt` file.
+Install all the required Python packages.
 
 ```bash
 pip install -r requirements.txt
@@ -81,37 +84,60 @@ pip install -r requirements.txt
 
 ### 4. Set Up Environment Variables
 
-You need an API key from [Together.ai](https://www.together.ai/) to run the language model.
+The application needs an API key from [Together.ai](https://www.together.ai/) to function.
 
 1.  Create a file named `.env` in the root of your project directory.
 2.  Add your API key to this file:
-
     ```
     TOGETHER_API_KEY="your_api_key_here"
     ```
+The backend will automatically load this key on startup.
 
-The `main.py` script is configured to automatically load this key.
+### 5. Initialize the Chat History Database
 
-### 5. Run the Application
+Before running the application for the first time, you need to create the SQLite database that will store conversation histories.
 
-You need to run the backend and frontend servers in two separate terminal windows.
+Run the following command in your terminal:
+
+```bash
+python -c "from database_utils import create_chat_history_table; create_chat_history_table()"
+```
+This will create a `rag_app.db` file in your project directory. You only need to do this once.
+
+### 6. Run the Application
+
+You need to run the backend and frontend servers in **two separate terminals**. Make sure your virtual environment is activated in both.
 
 **In your first terminal, start the backend server:**
 
 ```bash
-# This will start the FastAPI server.
-# Wait for it to display "RAG Pipeline loaded successfully..."
+# This starts the FastAPI server.
+# Wait for it to display "Retriever loaded successfully."
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 **In your second terminal, start the Streamlit frontend:**
 
 ```bash
-# This will start the Streamlit app and open it in your browser.
+# This starts the Streamlit app and should open it in your browser.
 streamlit run app.py
 ```
 
-You should now be able to interact with your chatbot at `http://localhost:8501`.
+You can now interact with your chatbot at `http://localhost:8501`.
+
+---
+### (Optional) Enable LangSmith for Debugging
+
+To get deep insights into your RAG chain's performance, you can connect it to [LangSmith](https://smith.langchain.com/).
+
+1.  Sign up for a free LangSmith account and create an API key.
+2.  Add the following lines to your `.env` file:
+    ```
+    LANGCHAIN_TRACING_V2="true"
+    LANGCHAIN_API_KEY="your_langsmith_api_key_here"
+    LANGCHAIN_PROJECT="UW-Madison CS Advisor"
+    ```
+3.  Restart your FastAPI backend. It will now automatically send traces to your LangSmith project.
 
 ---
 
@@ -121,6 +147,7 @@ You should now be able to interact with your chatbot at `http://localhost:8501`.
 .
 ├── app.py              # The Streamlit frontend application
 ├── main.py             # The FastAPI backend and RAG pipeline
+├── database_utils.py   # Utilities for the chat history database (SQLite)
 ├── knowledge_base.py   # The raw data for the knowledge base
 ├── requirements.txt    # Project dependencies
 └── README.md           # This file
